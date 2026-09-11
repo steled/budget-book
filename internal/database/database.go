@@ -3,9 +3,10 @@
 // templates.
 //
 // Schema changes must go exclusively through migrate() below, using
-// CREATE TABLE IF NOT EXISTS for new tables and a columnExists guard before
-// ALTER TABLE ADD COLUMN for evolving existing ones (SQLite has no ADD
-// COLUMN IF NOT EXISTS). No destructive migrations.
+// CREATE TABLE IF NOT EXISTS for new tables. Evolving an existing table
+// (SQLite has no ADD COLUMN IF NOT EXISTS) needs a guard that queries
+// pragma_table_info first, checking whether the column is already present
+// before running ALTER TABLE ADD COLUMN. No destructive migrations.
 package database
 
 import (
@@ -101,28 +102,6 @@ func migrate(db *sql.DB) error {
 	}
 
 	return nil
-}
-
-// columnExists is kept for future schema evolution: guard an
-// ALTER TABLE ... ADD COLUMN with it, since SQLite lacks
-// "ADD COLUMN IF NOT EXISTS".
-func columnExists(db *sql.DB, table, column string) (bool, error) {
-	rows, err := db.Query(fmt.Sprintf(`SELECT name FROM pragma_table_info(?)`), table)
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return false, err
-		}
-		if name == column {
-			return true, nil
-		}
-	}
-	return false, rows.Err()
 }
 
 // isForeignKeyViolation reports whether err is a SQLite foreign key

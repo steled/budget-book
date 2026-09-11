@@ -27,14 +27,14 @@ type categoryRequest struct {
 
 func (req categoryRequest) validate() (database.CategoryType, error) {
 	if req.Name == "" {
-		return "", errors.New("Name ist erforderlich.")
+		return "", jsonError("Name ist erforderlich.")
 	}
 	if req.Color == "" {
-		return "", errors.New("Farbe ist erforderlich.")
+		return "", jsonError("Farbe ist erforderlich.")
 	}
 	typ := database.CategoryType(req.Type)
 	if typ != database.CategoryIncome && typ != database.CategoryExpense {
-		return "", errors.New("Typ muss income oder expense sein.")
+		return "", jsonError("Typ muss income oder expense sein.")
 	}
 	return typ, nil
 }

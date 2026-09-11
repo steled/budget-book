@@ -52,7 +52,7 @@ func TestOpenIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Open() error = %v", err)
 	}
-	defer s2.Close()
+	defer func() { _ = s2.Close() }()
 
 	accounts, err := s2.ListAccounts()
 	if err != nil {

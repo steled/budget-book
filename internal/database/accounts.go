@@ -28,7 +28,7 @@ func (s *Store) ListAccounts() ([]Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var accounts []Account
 	for rows.Next() {
@@ -63,7 +63,7 @@ func (s *Store) ListAccountBalances() ([]AccountBalance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var balances []AccountBalance
 	for rows.Next() {

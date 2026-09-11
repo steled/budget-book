@@ -92,9 +92,10 @@ func TestListAccountBalances(t *testing.T) {
 
 	var incomeCat, expenseCat Category
 	for _, c := range categories {
-		if c.Type == CategoryIncome {
+		switch c.Type {
+		case CategoryIncome:
 			incomeCat = c
-		} else if c.Type == CategoryExpense {
+		case CategoryExpense:
 			expenseCat = c
 		}
 	}

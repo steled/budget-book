@@ -85,7 +85,7 @@ func (s *Store) ListTransactions(limit int) ([]TransactionDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []TransactionDetail
 	for rows.Next() {
@@ -109,7 +109,7 @@ func (s *Store) ListTransactionsInMonth(year int, month time.Month) ([]Transacti
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []TransactionDetail
 	for rows.Next() {

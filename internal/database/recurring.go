@@ -68,7 +68,7 @@ func (s *Store) ListRecurringTemplates() ([]RecurringTemplate, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []RecurringTemplate
 	for rows.Next() {
@@ -91,7 +91,7 @@ func (s *Store) ListActiveDueRecurringTemplates(asOf time.Time) ([]RecurringTemp
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []RecurringTemplate
 	for rows.Next() {
