@@ -1,5 +1,10 @@
 # 📒 Budget Book
 
+[![Test](https://github.com/steled/budget-book/actions/workflows/test.yaml/badge.svg)](https://github.com/steled/budget-book/actions/workflows/test.yaml)
+[![Latest Tag](https://img.shields.io/github/v/tag/steled/budget-book?label=release)](https://github.com/steled/budget-book/tags)
+[![Go Version](https://img.shields.io/badge/go-1.26-00ADD8?logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
 A lightweight, single-user personal household budget book. Go + SQLite,
 compiled into a single static binary with all templates and static assets
 embedded — no external dependencies at runtime beyond the SQLite file.
