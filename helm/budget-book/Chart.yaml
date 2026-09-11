@@ -1,0 +1,17 @@
+apiVersion: v2
+name: budget-book
+description: Lightweight personal household budget book web application
+type: application
+kubeVersion: ">=1.29.0-0"
+version: 0.1.0
+appVersion: "v0.1.0"
+keywords:
+  - budget
+  - household
+  - finance
+home: https://github.com/steled/budget-book
+sources:
+  - https://github.com/steled/budget-book
+maintainers:
+  - name: steled
+    email: 34886888+steled@users.noreply.github.com

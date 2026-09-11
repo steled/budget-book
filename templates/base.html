@@ -1,0 +1,29 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="de" id="html-root" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budget Book</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📒</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>📒 Budget Book</h1>
+    <div class="header-actions">
+      <button id="theme-toggle" class="btn-icon" aria-label="Dark/Light Mode wechseln" title="Dark/Light Mode">🌙</button>
+      {{if .LoggedIn}}<form method="POST" action="/logout" class="logout-form"><button type="submit" class="btn-link">Abmelden</button></form>{{end}}
+    </div>
+  </header>
+  <main>
+    {{template "content" .}}
+  </main>
+  <footer>
+    <span>{{.Version}}</span>
+  </footer>
+  <script src="/static/theme.js"></script>
+  {{if .LoggedIn}}<script src="/static/app.js"></script>{{end}}
+</body>
+</html>
+{{end}}

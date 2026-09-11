@@ -1,0 +1,613 @@
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Theme variables ─────────────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg:           #f4f4f5;
+  --surface:      #ffffff;
+  --border:       #e4e4e7;
+  --text:         #18181b;
+  --text-muted:   #71717a;
+  --accent:       #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger:       #dc2626;
+  --danger-hover: #b91c1c;
+  --income:       #16a34a;
+  --expense:      #dc2626;
+  --shadow:       0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg:           #0f0f11;
+  --surface:      #18181b;
+  --border:       #27272a;
+  --text:         #f4f4f5;
+  --text-muted:   #71717a;
+  --accent:       #3b82f6;
+  --accent-hover: #2563eb;
+  --danger:       #ef4444;
+  --danger-hover: #dc2626;
+  --income:       #22c55e;
+  --expense:      #ef4444;
+  --shadow:       0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+html {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+header {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+
+header h1 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.logout-form { display: inline; }
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.25rem 1rem;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 0.625rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-secondary {
+  background: var(--border);
+  color: var(--text);
+}
+.btn-secondary:hover { background: color-mix(in srgb, var(--border) 70%, var(--text)); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+}
+.btn-danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.25rem;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: background 0.15s;
+}
+.btn-icon:hover { background: var(--border); color: var(--text); }
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-block { width: 100%; }
+
+.btn-link {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  min-height: 2.75rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-link:hover { color: var(--text); }
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="date"],
+select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="color"] {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.625rem 0.25rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-panel[hidden] { display: none; }
+
+/* ── Balance card ────────────────────────────────────────────────────────── */
+.balance-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1rem;
+}
+
+.balance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.balance-label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.balance-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Account tiles ───────────────────────────────────────────────────────── */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+
+.account-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  padding: 0.875rem;
+  box-shadow: var(--shadow);
+}
+
+.account-tile-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-tile-balance {
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Transaction list ────────────────────────────────────────────────────── */
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.transaction-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.transaction-day-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 0.125rem;
+}
+
+.transaction-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.transaction-row:hover { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+
+.transaction-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.transaction-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.transaction-title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-recurring-icon {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.transaction-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-amount {
+  flex-shrink: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-income { color: var(--income); }
+.amount-expense { color: var(--expense); }
+
+.empty-hint {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* ── Month tab ───────────────────────────────────────────────────────────── */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.month-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  min-width: 10rem;
+  text-align: center;
+}
+
+.month-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.month-figure {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.figure-label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.figure-amount {
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-bar {
+  display: flex;
+  width: 100%;
+  height: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--border);
+  margin-bottom: 1rem;
+}
+
+.month-bar-segment {
+  height: 100%;
+  transition: width 0.2s;
+}
+.month-bar-income { background: var(--income); }
+.month-bar-expense { background: var(--expense); }
+
+.month-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+
+/* ── Settings tab ────────────────────────────────────────────────────────── */
+.settings-block {
+  margin-bottom: 1.75rem;
+}
+
+.settings-block h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.625rem;
+}
+
+.settings-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+}
+
+.settings-list .settings-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.color-dot {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inline-form input[type="text"],
+.inline-form input[type="number"],
+.inline-form input[type="date"] {
+  flex: 1;
+  min-width: 6rem;
+}
+
+.inline-form input[type="color"] { flex: 0 0 auto; }
+.inline-form select { flex: 1; min-width: 8rem; }
+.inline-form-wrap { align-items: center; }
+
+/* ── Transaction dialog ──────────────────────────────────────────────────── */
+dialog {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 400px;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+dialog h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.dialog-actions .btn-danger { margin-right: auto; }
+
+/* ── Login page ──────────────────────────────────────────────────────────── */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60dvh;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--shadow);
+}
+
+.login-card h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 0.375rem;
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-radius: 0.375rem;
+  border-left: 3px solid var(--danger);
+}
+
+/* ── Small screens ───────────────────────────────────────────────────────── */
+@media (max-width: 420px) {
+  .accounts-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .month-summary { grid-template-columns: 1fr; }
+}

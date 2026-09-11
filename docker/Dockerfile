@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1
+
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM golang:1.26-alpine AS builder
+
+ARG APP_VERSION=dev
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w -X main.version=${APP_VERSION}" \
+    -o /budget-book .
+
+# ── Final stage ───────────────────────────────────────────────────────────────
+FROM alpine:3.24
+
+ARG APP_VERSION=dev
+
+LABEL org.opencontainers.image.title="Budget Book" \
+      org.opencontainers.image.description="Lightweight personal household budget book web application" \
+      org.opencontainers.image.vendor="steled" \
+      org.opencontainers.image.source="https://github.com/steled/budget-book" \
+      org.opencontainers.image.version="${APP_VERSION}"
+
+RUN addgroup -S -g 1001 appgroup \
+ && adduser  -S -u 1001 -G appgroup appuser
+
+RUN mkdir -p /data && chown appuser:appgroup /data
+
+COPY --from=builder /budget-book /usr/local/bin/budget-book
+
+USER 1001:1001
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["sh", "-c", "wget -qO- http://localhost:8080/healthz || exit 1"]
+
+CMD ["/usr/local/bin/budget-book"]

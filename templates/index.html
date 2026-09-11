@@ -1,0 +1,124 @@
+{{define "content"}}
+<nav class="tabs" role="tablist">
+  <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Übersicht</button>
+  <button class="tab-btn" data-tab="month" role="tab" aria-selected="false">Monat</button>
+  <button class="tab-btn" data-tab="settings" role="tab" aria-selected="false">Einstellungen</button>
+</nav>
+
+<section id="tab-overview" class="tab-panel" role="tabpanel">
+  <div class="balance-card">
+    <div class="balance-info">
+      <span class="balance-label">Gesamtsaldo</span>
+      <span id="total-balance" class="balance-amount">–</span>
+    </div>
+    <button id="add-transaction-btn" class="btn btn-primary" type="button">+ Buchung</button>
+  </div>
+
+  <div id="accounts-grid" class="accounts-grid" aria-label="Konten"></div>
+
+  <div id="transactions-list" class="transactions-list" aria-label="Buchungen"></div>
+</section>
+
+<section id="tab-month" class="tab-panel" role="tabpanel" hidden>
+  <div class="month-nav">
+    <button id="month-prev" class="btn-icon" type="button" aria-label="Vorheriger Monat">‹</button>
+    <span id="month-label" class="month-label"></span>
+    <button id="month-next" class="btn-icon" type="button" aria-label="Nächster Monat">›</button>
+  </div>
+  <div class="month-summary">
+    <div class="month-figure">
+      <span class="figure-label">Einnahmen</span>
+      <span id="month-income" class="figure-amount amount-income">–</span>
+    </div>
+    <div class="month-figure">
+      <span class="figure-label">Ausgaben</span>
+      <span id="month-expense" class="figure-amount amount-expense">–</span>
+    </div>
+  </div>
+  <div class="month-bar" aria-hidden="true">
+    <div id="month-bar-income" class="month-bar-segment month-bar-income"></div>
+    <div id="month-bar-expense" class="month-bar-segment month-bar-expense"></div>
+  </div>
+  <div class="month-balance">
+    <span>Saldo des Monats</span>
+    <span id="month-balance"></span>
+  </div>
+</section>
+
+<section id="tab-settings" class="tab-panel" role="tabpanel" hidden>
+  <div class="settings-block">
+    <h2>Konten</h2>
+    <ul id="settings-accounts" class="settings-list"></ul>
+    <form id="account-form" class="inline-form">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="text" name="icon" placeholder="Icon (Emoji)" maxlength="4">
+      <button type="submit" class="btn btn-secondary">Konto hinzufügen</button>
+    </form>
+  </div>
+
+  <div class="settings-block">
+    <h2>Kategorien</h2>
+    <ul id="settings-categories" class="settings-list"></ul>
+    <form id="category-form" class="inline-form">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="color" name="color" value="#6366f1" aria-label="Farbe">
+      <select name="type" aria-label="Typ">
+        <option value="expense">Ausgabe</option>
+        <option value="income">Einnahme</option>
+      </select>
+      <button type="submit" class="btn btn-secondary">Kategorie hinzufügen</button>
+    </form>
+  </div>
+
+  <div class="settings-block">
+    <h2>Wiederkehrende Buchungen</h2>
+    <ul id="settings-recurring" class="settings-list"></ul>
+    <form id="recurring-form" class="inline-form inline-form-wrap">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="number" name="amount" placeholder="Betrag (€)" step="0.01" min="0" required>
+      <select name="categoryId" aria-label="Kategorie" required></select>
+      <select name="accountId" aria-label="Konto" required></select>
+      <select name="interval" aria-label="Intervall">
+        <option value="monthly">monatlich</option>
+        <option value="weekly">wöchentlich</option>
+        <option value="yearly">jährlich</option>
+      </select>
+      <input type="date" name="nextDueDate" required>
+      <button type="submit" class="btn btn-secondary">Vorlage hinzufügen</button>
+    </form>
+  </div>
+</section>
+
+<dialog id="transaction-dialog">
+  <form id="transaction-form">
+    <h2 id="transaction-dialog-title">Buchung hinzufügen</h2>
+    <input type="hidden" name="id">
+    <div class="form-group">
+      <label for="tx-amount">Betrag (€)</label>
+      <input type="number" id="tx-amount" name="amount" step="0.01" min="0" required>
+    </div>
+    <div class="form-group">
+      <label for="tx-date">Datum</label>
+      <input type="date" id="tx-date" name="date" required>
+    </div>
+    <div class="form-group">
+      <label for="tx-description">Beschreibung</label>
+      <input type="text" id="tx-description" name="description">
+    </div>
+    <div class="form-group">
+      <label for="tx-category">Kategorie</label>
+      <select id="tx-category" name="categoryId" required></select>
+    </div>
+    <div class="form-group">
+      <label for="tx-account">Konto</label>
+      <select id="tx-account" name="accountId" required></select>
+    </div>
+    <p id="transaction-error" class="error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" id="tx-delete" class="btn btn-danger" hidden>Löschen</button>
+      <button type="button" id="tx-cancel" class="btn btn-secondary">Abbrechen</button>
+      <button type="submit" class="btn btn-primary">Speichern</button>
+    </div>
+  </form>
+</dialog>
+{{end}}
