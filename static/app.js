@@ -142,9 +142,10 @@
     }).join('');
 
     container.querySelectorAll('.transaction-row').forEach(function (row) {
+      var id = Number(row.dataset.id);
+      var tx = transactions.find(function (t) { return t.id === id; });
+      if (tx) row.querySelector('.transaction-icon').style.background = tx.categoryColor;
       row.addEventListener('click', function () {
-        var id = Number(row.dataset.id);
-        var tx = transactions.find(function (t) { return t.id === id; });
         if (tx) openTransactionDialog(tx);
       });
     });
@@ -154,7 +155,9 @@
     var isIncome = t.categoryType === 'income';
     var sign = isIncome ? '+' : '−';
     return '<div class="transaction-row" data-id="' + t.id + '">' +
-      '<div class="transaction-icon" style="background:' + esc(t.categoryColor) + '">' +
+      // Colour is set via CSSOM after rendering: a style="" attribute is
+      // blocked by the CSP (style-src 'self').
+      '<div class="transaction-icon">' +
       (isIncome ? '↓' : '↑') +
       '</div>' +
       '<div class="transaction-details">' +
@@ -332,12 +335,15 @@
       var list = document.getElementById('settings-categories');
       list.innerHTML = categories.map(function (c) {
         return '<li data-id="' + c.id + '">' +
-          '<span class="color-dot" style="background:' + esc(c.color) + '"></span>' +
+          '<span class="color-dot"></span>' +
           '<span class="settings-item-name">' + esc(c.name) + '</span>' +
           '<span class="transaction-meta">' + (c.type === 'income' ? 'Einnahme' : 'Ausgabe') + '</span>' +
           '<button type="button" class="btn-icon settings-delete" aria-label="Kategorie löschen">🗑</button>' +
           '</li>';
       }).join('');
+      list.querySelectorAll('.color-dot').forEach(function (dot, i) {
+        dot.style.background = categories[i].color;
+      });
       list.querySelectorAll('.settings-delete').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var id = btn.closest('li').dataset.id;
