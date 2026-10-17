@@ -356,6 +356,19 @@
     });
   }
 
+  var INTERVAL_LABELS = { weekly: 'wöchentlich', monthly: 'monatlich', yearly: 'jährlich' };
+
+  function recurringScheduleLabel(rt) {
+    var label = INTERVAL_LABELS[rt.interval] || rt.interval;
+    if (rt.remainingCount === null || rt.remainingCount === undefined) {
+      return label + ' · ab ' + rt.nextDueDate;
+    }
+    if (rt.remainingCount === 0) return 'abgeschlossen';
+    if (rt.remainingCount === 1) return 'einmalig am ' + rt.nextDueDate;
+    return label + ' · noch ' + rt.remainingCount + ' Raten (' +
+      formatCents(rt.amountCents * rt.remainingCount) + ' offen) · nächste ' + rt.nextDueDate;
+  }
+
   function loadRecurringSettings() {
     return Promise.all([api('/api/recurring'), refreshReferenceData()]).then(function (results) {
       var templates = results[0];
@@ -370,8 +383,8 @@
         var account = state.accounts.find(function (a) { return a.id === rt.accountId; });
         return '<li data-id="' + rt.id + '">' +
           '<span class="settings-item-name">' + esc(rt.name) + ' (' + formatCents(rt.amountCents) + ')</span>' +
-          '<span class="transaction-meta">' + esc(category ? category.name : '') + ' · ' + esc(account ? account.name : '') +
-          ' · ' + esc(rt.interval) + ' · ab ' + esc(rt.nextDueDate) + '</span>' +
+          '<span class="transaction-meta recurring-meta">' + esc(category ? category.name : '') + ' · ' + esc(account ? account.name : '') +
+          ' · ' + esc(recurringScheduleLabel(rt)) + '</span>' +
           '<label><input type="checkbox" class="recurring-active" ' + (rt.active ? 'checked' : '') + '> aktiv</label>' +
           '<button type="button" class="btn-icon settings-delete" aria-label="Vorlage löschen">🗑</button>' +
           '</li>';
@@ -391,6 +404,7 @@
               accountId: rt.accountId,
               interval: rt.interval,
               nextDueDate: rt.nextDueDate,
+              remainingCount: rt.remainingCount,
               active: checkbox.checked,
             },
           }).catch(function (err) { alert(err.message); });
@@ -438,9 +452,19 @@
       }).catch(function (err) { alert(err.message); });
     });
 
-    document.getElementById('recurring-form').addEventListener('submit', function (e) {
+    var recurringForm = document.getElementById('recurring-form');
+    recurringForm.elements['interval'].addEventListener('change', function (e) {
+      var countInput = recurringForm.elements['remainingCount'];
+      var once = e.target.value === 'once';
+      countInput.disabled = once;
+      if (once) countInput.value = '';
+    });
+
+    recurringForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var form = e.target;
+      var once = form.elements['interval'].value === 'once';
+      var countRaw = form.elements['remainingCount'].value;
       api('/api/recurring', {
         method: 'POST',
         body: {
@@ -448,12 +472,14 @@
           amount: form.elements['amount'].value,
           categoryId: Number(form.elements['categoryId'].value),
           accountId: Number(form.elements['accountId'].value),
-          interval: form.elements['interval'].value,
+          interval: once ? 'monthly' : form.elements['interval'].value,
+          remainingCount: once ? 1 : (countRaw === '' ? null : Number(countRaw)),
           nextDueDate: form.elements['nextDueDate'].value,
           active: true,
         },
       }).then(function () {
         form.reset();
+        form.elements['remainingCount'].disabled = false;
         return loadRecurringSettings();
       }).catch(function (err) { alert(err.message); });
     });

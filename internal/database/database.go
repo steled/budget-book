@@ -97,11 +97,29 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	hasRemaining, err := columnExists(db, "recurring_templates", "remaining_count")
+	if err != nil {
+		return fmt.Errorf("check remaining_count column: %w", err)
+	}
+	if !hasRemaining {
+		if _, err := db.Exec(`ALTER TABLE recurring_templates ADD COLUMN remaining_count INTEGER`); err != nil {
+			return fmt.Errorf("add remaining_count column: %w", err)
+		}
+	}
+
 	if err := seedDefaultCategories(db); err != nil {
 		return fmt.Errorf("seed default categories: %w", err)
 	}
 
 	return nil
+}
+
+func columnExists(db *sql.DB, table, column string) (bool, error) {
+	var n int
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?`, table, column,
+	).Scan(&n)
+	return n > 0, err
 }
 
 // isForeignKeyViolation reports whether err is a SQLite foreign key
