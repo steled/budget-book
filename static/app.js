@@ -310,6 +310,7 @@
   function loadAccountsSettings() {
     return api('/api/accounts').then(function (accounts) {
       state.accounts = accounts;
+      populateRecurringFormSelects();
       var list = document.getElementById('settings-accounts');
       list.innerHTML = accounts.map(function (a) {
         return '<li data-id="' + a.id + '">' +
@@ -332,6 +333,7 @@
   function loadCategoriesSettings() {
     return api('/api/categories').then(function (categories) {
       state.categories = categories;
+      populateRecurringFormSelects();
       var list = document.getElementById('settings-categories');
       list.innerHTML = categories.map(function (c) {
         return '<li data-id="' + c.id + '">' +
@@ -488,8 +490,12 @@
   function populateRecurringFormSelects() {
     var categorySelect = document.querySelector('#recurring-form select[name="categoryId"]');
     var accountSelect = document.querySelector('#recurring-form select[name="accountId"]');
+    var categoryValue = categorySelect.value;
+    var accountValue = accountSelect.value;
     populateSelect(categorySelect, state.categories, function (c) { return c.name; });
     populateSelect(accountSelect, state.accounts, function (a) { return a.name; });
+    if (categoryValue) categorySelect.value = categoryValue;
+    if (accountValue) accountSelect.value = accountValue;
   }
 
   // ── Init ──────────────────────────────────────────────────────────────
