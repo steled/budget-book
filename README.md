@@ -82,7 +82,7 @@ API requests get a JSON `401`.
 | GET/POST | `/api/transactions` | List (`?limit=`) / create transactions |
 | PUT/DELETE | `/api/transactions/{id}` | Update / delete a transaction |
 | GET/POST | `/api/recurring` | List / create recurring templates (optional `remainingCount`, 1–600; `null` = unlimited) |
-| PUT/DELETE | `/api/recurring/{id}` | Update / delete a recurring template |
+| PUT/DELETE | `/api/recurring/{id}` | Update / delete a recurring template (editable in the settings UI) |
 | GET | `/healthz` | Liveness probe, no auth |
 
 ## Development
