@@ -388,6 +388,7 @@
           '<span class="transaction-meta recurring-meta">' + esc(category ? category.name : '') + ' · ' + esc(account ? account.name : '') +
           ' · ' + esc(recurringScheduleLabel(rt)) + '</span>' +
           '<label><input type="checkbox" class="recurring-active" ' + (rt.active ? 'checked' : '') + '> aktiv</label>' +
+          '<button type="button" class="btn-icon recurring-edit" aria-label="Vorlage bearbeiten">✏️</button>' +
           '<button type="button" class="btn-icon settings-delete" aria-label="Vorlage löschen">🗑</button>' +
           '</li>';
       }).join('');
@@ -413,6 +414,13 @@
         });
       });
 
+      list.querySelectorAll('.recurring-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.closest('li').dataset.id;
+          startRecurringEdit(templates.find(function (t) { return String(t.id) === id; }));
+        });
+      });
+
       list.querySelectorAll('.settings-delete').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var id = btn.closest('li').dataset.id;
@@ -423,6 +431,34 @@
         });
       });
     });
+  }
+
+  var editingRecurring = null;
+
+  function setRecurringEditMode(rt) {
+    var form = document.getElementById('recurring-form');
+    editingRecurring = rt;
+    document.getElementById('recurring-submit').textContent = rt ? 'Speichern' : 'Vorlage hinzufügen';
+    document.getElementById('recurring-cancel').hidden = !rt;
+    if (!rt) {
+      form.reset();
+      form.elements['remainingCount'].disabled = false;
+    }
+  }
+
+  function startRecurringEdit(rt) {
+    var form = document.getElementById('recurring-form');
+    var once = rt.remainingCount === 1;
+    form.elements['name'].value = rt.name;
+    form.elements['amount'].value = (rt.amountCents / 100).toFixed(2);
+    form.elements['categoryId'].value = rt.categoryId;
+    form.elements['accountId'].value = rt.accountId;
+    form.elements['interval'].value = once ? 'once' : rt.interval;
+    form.elements['remainingCount'].disabled = once;
+    form.elements['remainingCount'].value = once || rt.remainingCount === null ? '' : rt.remainingCount;
+    form.elements['nextDueDate'].value = rt.nextDueDate;
+    setRecurringEditMode(rt);
+    form.elements['name'].focus();
   }
 
   function initSettingsForms() {
@@ -462,13 +498,18 @@
       if (once) countInput.value = '';
     });
 
+    document.getElementById('recurring-cancel').addEventListener('click', function () {
+      setRecurringEditMode(null);
+    });
+
     recurringForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var form = e.target;
       var once = form.elements['interval'].value === 'once';
       var countRaw = form.elements['remainingCount'].value;
-      api('/api/recurring', {
-        method: 'POST',
+      var editing = editingRecurring;
+      api(editing ? '/api/recurring/' + editing.id : '/api/recurring', {
+        method: editing ? 'PUT' : 'POST',
         body: {
           name: form.elements['name'].value,
           amount: form.elements['amount'].value,
@@ -477,11 +518,10 @@
           interval: once ? 'monthly' : form.elements['interval'].value,
           remainingCount: once ? 1 : (countRaw === '' ? null : Number(countRaw)),
           nextDueDate: form.elements['nextDueDate'].value,
-          active: true,
+          active: editing ? editing.active : true,
         },
       }).then(function () {
-        form.reset();
-        form.elements['remainingCount'].disabled = false;
+        setRecurringEditMode(null);
         return loadRecurringSettings();
       }).catch(function (err) { alert(err.message); });
     });

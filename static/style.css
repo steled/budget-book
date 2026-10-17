@@ -229,6 +229,7 @@ input:focus, select:focus {
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 .tab-panel[hidden] { display: none; }
+.btn[hidden] { display: none; }
 
 /* ── Balance card ────────────────────────────────────────────────────────── */
 .balance-card {

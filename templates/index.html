@@ -86,7 +86,8 @@
       </select>
       <input type="number" name="remainingCount" placeholder="Raten (optional)" aria-label="Anzahl Raten" step="1" min="1" max="600">
       <input type="date" name="nextDueDate" aria-label="Erste Fälligkeit" required>
-      <button type="submit" class="btn btn-secondary">Vorlage hinzufügen</button>
+      <button type="submit" class="btn btn-secondary" id="recurring-submit">Vorlage hinzufügen</button>
+      <button type="button" class="btn btn-secondary" id="recurring-cancel" hidden>Abbrechen</button>
     </form>
   </div>
 </section>
