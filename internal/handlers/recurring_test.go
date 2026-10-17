@@ -57,3 +57,31 @@ func TestCreateRecurringTemplateRejectsInvalidInterval(t *testing.T) {
 		t.Errorf("status = %d, want 400", rec.Code)
 	}
 }
+
+func TestRecurringTemplateRemainingCount(t *testing.T) {
+	env := newTestEnv(t)
+	account, category := seedAccountAndCategory(t, env)
+	six := 6
+
+	rec := env.do(t, http.MethodPost, "/api/recurring", recurringTemplateRequest{
+		Name: "Sofa", Amount: "50.00", CategoryID: category.ID, AccountID: account.ID,
+		Interval: "monthly", NextDueDate: "2026-04-01", Active: true, RemainingCount: &six,
+	}, true)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if got := decodeJSON[recurringTemplateDTO](t, rec); got.RemainingCount == nil || *got.RemainingCount != 6 {
+		t.Errorf("RemainingCount = %v, want 6", got.RemainingCount)
+	}
+
+	for _, bad := range []int{0, -1, 601} {
+		bad := bad
+		rec := env.do(t, http.MethodPost, "/api/recurring", recurringTemplateRequest{
+			Name: "Sofa", Amount: "50.00", CategoryID: category.ID, AccountID: account.ID,
+			Interval: "monthly", NextDueDate: "2026-04-01", Active: true, RemainingCount: &bad,
+		}, true)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("remainingCount %d: status = %d, want 400", bad, rec.Code)
+		}
+	}
+}

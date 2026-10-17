@@ -8,6 +8,8 @@ import (
 	"github.com/steled/budget-book/internal/database"
 )
 
+const maxRecurringCount = 600
+
 type recurringTemplateDTO struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
@@ -17,29 +19,33 @@ type recurringTemplateDTO struct {
 	Interval    string `json:"interval"`
 	NextDueDate string `json:"nextDueDate"`
 	Active      bool   `json:"active"`
+	// RemainingCount is the number of bookings still to be made; null means unlimited.
+	RemainingCount *int `json:"remainingCount"`
 }
 
 func toRecurringTemplateDTO(rt database.RecurringTemplate) recurringTemplateDTO {
 	return recurringTemplateDTO{
-		ID:          rt.ID,
-		Name:        rt.Name,
-		AmountCents: rt.AmountCents,
-		CategoryID:  rt.CategoryID,
-		AccountID:   rt.AccountID,
-		Interval:    string(rt.Interval),
-		NextDueDate: rt.NextDueDate.Format("2006-01-02"),
-		Active:      rt.Active,
+		ID:             rt.ID,
+		Name:           rt.Name,
+		AmountCents:    rt.AmountCents,
+		CategoryID:     rt.CategoryID,
+		AccountID:      rt.AccountID,
+		Interval:       string(rt.Interval),
+		NextDueDate:    rt.NextDueDate.Format("2006-01-02"),
+		Active:         rt.Active,
+		RemainingCount: rt.RemainingCount,
 	}
 }
 
 type recurringTemplateRequest struct {
-	Name        string `json:"name"`
-	Amount      string `json:"amount"`
-	CategoryID  int64  `json:"categoryId"`
-	AccountID   int64  `json:"accountId"`
-	Interval    string `json:"interval"`
-	NextDueDate string `json:"nextDueDate"`
-	Active      bool   `json:"active"`
+	Name           string `json:"name"`
+	Amount         string `json:"amount"`
+	CategoryID     int64  `json:"categoryId"`
+	AccountID      int64  `json:"accountId"`
+	Interval       string `json:"interval"`
+	NextDueDate    string `json:"nextDueDate"`
+	Active         bool   `json:"active"`
+	RemainingCount *int   `json:"remainingCount"`
 }
 
 func (req recurringTemplateRequest) parse() (amountCents int64, interval database.RecurringInterval, nextDue time.Time, err error) {
@@ -58,6 +64,9 @@ func (req recurringTemplateRequest) parse() (amountCents int64, interval databas
 	case database.IntervalWeekly, database.IntervalMonthly, database.IntervalYearly:
 	default:
 		return 0, "", time.Time{}, jsonError("Intervall muss weekly, monthly oder yearly sein.")
+	}
+	if req.RemainingCount != nil && (*req.RemainingCount < 1 || *req.RemainingCount > maxRecurringCount) {
+		return 0, "", time.Time{}, jsonError("Anzahl Raten muss zwischen 1 und 600 liegen.")
 	}
 	nextDue, err = time.Parse("2006-01-02", req.NextDueDate)
 	if err != nil {
@@ -95,7 +104,7 @@ func (h *Handlers) CreateRecurringTemplate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	created, err := h.store.CreateRecurringTemplate(req.Name, amountCents, req.CategoryID, req.AccountID, interval, nextDue, req.Active)
+	created, err := h.store.CreateRecurringTemplate(req.Name, amountCents, req.CategoryID, req.AccountID, interval, nextDue, req.Active, req.RemainingCount)
 	if err != nil {
 		h.logger.Error("create recurring template failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "Vorlage konnte nicht angelegt werden.")
@@ -123,7 +132,7 @@ func (h *Handlers) UpdateRecurringTemplate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updated, err := h.store.UpdateRecurringTemplate(id, req.Name, amountCents, req.CategoryID, req.AccountID, interval, nextDue, req.Active)
+	updated, err := h.store.UpdateRecurringTemplate(id, req.Name, amountCents, req.CategoryID, req.AccountID, interval, nextDue, req.Active, req.RemainingCount)
 	if err != nil {
 		h.logger.Error("update recurring template failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "Vorlage konnte nicht aktualisiert werden.")

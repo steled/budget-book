@@ -30,7 +30,7 @@ func TestCreateAndUpdateRecurringTemplate(t *testing.T) {
 	account, _, expense := setupAccountAndCategories(t, s)
 	due := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 
-	created, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true)
+	created, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true, nil)
 	if err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
@@ -38,7 +38,7 @@ func TestCreateAndUpdateRecurringTemplate(t *testing.T) {
 		t.Errorf("created = %+v", created)
 	}
 
-	updated, err := s.UpdateRecurringTemplate(created.ID, "Miete neu", 85000, expense.ID, account.ID, IntervalMonthly, due, false)
+	updated, err := s.UpdateRecurringTemplate(created.ID, "Miete neu", 85000, expense.ID, account.ID, IntervalMonthly, due, false, nil)
 	if err != nil {
 		t.Fatalf("UpdateRecurringTemplate() error = %v", err)
 	}
@@ -53,7 +53,7 @@ func TestProcessDueRecurringTemplatesBooksSingleOccurrence(t *testing.T) {
 	due := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 
-	tmpl, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true)
+	tmpl, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true, nil)
 	if err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
@@ -95,7 +95,7 @@ func TestProcessDueRecurringTemplatesCatchesUpMissedOccurrences(t *testing.T) {
 	due := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 4, 5, 0, 0, 0, 0, time.UTC)
 
-	if _, err := s.CreateRecurringTemplate("Abo", 999, expense.ID, account.ID, IntervalMonthly, due, true); err != nil {
+	if _, err := s.CreateRecurringTemplate("Abo", 999, expense.ID, account.ID, IntervalMonthly, due, true, nil); err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
 
@@ -122,7 +122,7 @@ func TestProcessDueRecurringTemplatesSkipsInactive(t *testing.T) {
 	due := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
 
-	if _, err := s.CreateRecurringTemplate("Pausiert", 500, expense.ID, account.ID, IntervalMonthly, due, false); err != nil {
+	if _, err := s.CreateRecurringTemplate("Pausiert", 500, expense.ID, account.ID, IntervalMonthly, due, false, nil); err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
 
@@ -141,7 +141,7 @@ func TestProcessDueRecurringTemplatesSkipsNotYetDue(t *testing.T) {
 	due := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
 
-	if _, err := s.CreateRecurringTemplate("Zukunft", 500, expense.ID, account.ID, IntervalMonthly, due, true); err != nil {
+	if _, err := s.CreateRecurringTemplate("Zukunft", 500, expense.ID, account.ID, IntervalMonthly, due, true, nil); err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
 
@@ -159,7 +159,7 @@ func TestDeleteRecurringTemplate(t *testing.T) {
 	account, _, expense := setupAccountAndCategories(t, s)
 	due := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 
-	tmpl, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true)
+	tmpl, err := s.CreateRecurringTemplate("Miete", 80000, expense.ID, account.ID, IntervalMonthly, due, true, nil)
 	if err != nil {
 		t.Fatalf("CreateRecurringTemplate() error = %v", err)
 	}
@@ -170,5 +170,82 @@ func TestDeleteRecurringTemplate(t *testing.T) {
 
 	if _, err := s.GetRecurringTemplate(tmpl.ID); err == nil {
 		t.Error("GetRecurringTemplate() succeeded after delete, want error")
+	}
+}
+
+func TestProcessDueRecurringTemplatesStopsAfterRemainingCount(t *testing.T) {
+	s := newTestStore(t)
+	account, _, expense := setupAccountAndCategories(t, s)
+	due := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	three := 3
+
+	tmpl, err := s.CreateRecurringTemplate("Waschmaschine", 5000, expense.ID, account.ID, IntervalMonthly, due, true, &three)
+	if err != nil {
+		t.Fatalf("CreateRecurringTemplate() error = %v", err)
+	}
+	if tmpl.RemainingCount == nil || *tmpl.RemainingCount != 3 {
+		t.Fatalf("RemainingCount = %v, want 3", tmpl.RemainingCount)
+	}
+
+	created, err := s.ProcessDueRecurringTemplates(asOf)
+	if err != nil {
+		t.Fatalf("ProcessDueRecurringTemplates() error = %v", err)
+	}
+	if created != 3 {
+		t.Fatalf("created = %d, want 3 (limited by remaining count)", created)
+	}
+
+	got, err := s.GetRecurringTemplate(tmpl.ID)
+	if err != nil {
+		t.Fatalf("GetRecurringTemplate() error = %v", err)
+	}
+	if got.Active || got.RemainingCount == nil || *got.RemainingCount != 0 {
+		t.Errorf("after last booking: active = %v, remaining = %v, want inactive and 0", got.Active, got.RemainingCount)
+	}
+
+	again, err := s.ProcessDueRecurringTemplates(asOf)
+	if err != nil {
+		t.Fatalf("second ProcessDueRecurringTemplates() error = %v", err)
+	}
+	if again != 0 {
+		t.Errorf("second run created %d, want 0", again)
+	}
+}
+
+func TestProcessDueRecurringTemplatesSingleInstallmentBooksOnce(t *testing.T) {
+	s := newTestStore(t)
+	account, _, expense := setupAccountAndCategories(t, s)
+	due := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
+	one := 1
+
+	tmpl, err := s.CreateRecurringTemplate("PayPal später zahlen", 12000, expense.ID, account.ID, IntervalMonthly, due, true, &one)
+	if err != nil {
+		t.Fatalf("CreateRecurringTemplate() error = %v", err)
+	}
+	if n, err := s.ProcessDueRecurringTemplates(due); err != nil || n != 1 {
+		t.Fatalf("first run = %d, %v, want 1, nil", n, err)
+	}
+	if n, err := s.ProcessDueRecurringTemplates(due.AddDate(0, 3, 0)); err != nil || n != 0 {
+		t.Fatalf("later run = %d, %v, want 0, nil", n, err)
+	}
+	if got, _ := s.GetRecurringTemplate(tmpl.ID); got.Active {
+		t.Error("template still active after its only installment")
+	}
+}
+
+func TestMigrateAddsRemainingCountToExistingDatabase(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.db.Exec(`ALTER TABLE recurring_templates DROP COLUMN remaining_count`); err != nil {
+		t.Fatalf("drop column: %v", err)
+	}
+	if err := migrate(s.db); err != nil {
+		t.Fatalf("migrate() error = %v", err)
+	}
+	if err := migrate(s.db); err != nil {
+		t.Fatalf("second migrate() error = %v", err)
+	}
+	if ok, err := columnExists(s.db, "recurring_templates", "remaining_count"); err != nil || !ok {
+		t.Errorf("columnExists = %v, %v, want true, nil", ok, err)
 	}
 }

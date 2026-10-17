@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -24,7 +25,10 @@ type RecurringTemplate struct {
 	Interval    RecurringInterval
 	NextDueDate time.Time
 	Active      bool
-	CreatedAt   time.Time
+	// RemainingCount is the number of bookings still to be made; nil means
+	// unlimited. The template deactivates itself when it reaches zero.
+	RemainingCount *int
+	CreatedAt      time.Time
 }
 
 // Advance returns the next due date after the current one, per the
@@ -44,21 +48,26 @@ func scanRecurringTemplate(row interface{ Scan(...any) error }) (RecurringTempla
 	var rt RecurringTemplate
 	var interval, nextDue string
 	var active int
+	var remaining sql.NullInt64
 	err := row.Scan(
 		&rt.ID, &rt.Name, &rt.AmountCents, &rt.CategoryID, &rt.AccountID,
-		&interval, &nextDue, &active, &rt.CreatedAt,
+		&interval, &nextDue, &active, &remaining, &rt.CreatedAt,
 	)
 	if err != nil {
 		return RecurringTemplate{}, err
 	}
 	rt.Interval = RecurringInterval(interval)
 	rt.Active = active != 0
+	if remaining.Valid {
+		n := int(remaining.Int64)
+		rt.RemainingCount = &n
+	}
 	rt.NextDueDate, err = time.Parse(dateLayout, nextDue)
 	return rt, err
 }
 
 const recurringTemplateQuery = `
-	SELECT id, name, amount_cents, category_id, account_id, interval, next_due_date, active, created_at
+	SELECT id, name, amount_cents, category_id, account_id, interval, next_due_date, active, remaining_count, created_at
 	FROM recurring_templates
 `
 
@@ -111,11 +120,11 @@ func (s *Store) GetRecurringTemplate(id int64) (RecurringTemplate, error) {
 }
 
 // CreateRecurringTemplate inserts a new recurring template.
-func (s *Store) CreateRecurringTemplate(name string, amountCents int64, categoryID, accountID int64, interval RecurringInterval, nextDueDate time.Time, active bool) (RecurringTemplate, error) {
+func (s *Store) CreateRecurringTemplate(name string, amountCents int64, categoryID, accountID int64, interval RecurringInterval, nextDueDate time.Time, active bool, remainingCount *int) (RecurringTemplate, error) {
 	res, err := s.db.Exec(
-		`INSERT INTO recurring_templates (name, amount_cents, category_id, account_id, interval, next_due_date, active)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		name, amountCents, categoryID, accountID, string(interval), nextDueDate.Format(dateLayout), boolToInt(active),
+		`INSERT INTO recurring_templates (name, amount_cents, category_id, account_id, interval, next_due_date, active, remaining_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		name, amountCents, categoryID, accountID, string(interval), nextDueDate.Format(dateLayout), boolToInt(active), remainingCount,
 	)
 	if err != nil {
 		return RecurringTemplate{}, err
@@ -128,12 +137,12 @@ func (s *Store) CreateRecurringTemplate(name string, amountCents int64, category
 }
 
 // UpdateRecurringTemplate updates all editable fields of a template.
-func (s *Store) UpdateRecurringTemplate(id int64, name string, amountCents int64, categoryID, accountID int64, interval RecurringInterval, nextDueDate time.Time, active bool) (RecurringTemplate, error) {
+func (s *Store) UpdateRecurringTemplate(id int64, name string, amountCents int64, categoryID, accountID int64, interval RecurringInterval, nextDueDate time.Time, active bool, remainingCount *int) (RecurringTemplate, error) {
 	if _, err := s.db.Exec(
 		`UPDATE recurring_templates
-		 SET name = ?, amount_cents = ?, category_id = ?, account_id = ?, interval = ?, next_due_date = ?, active = ?
+		 SET name = ?, amount_cents = ?, category_id = ?, account_id = ?, interval = ?, next_due_date = ?, active = ?, remaining_count = ?
 		 WHERE id = ?`,
-		name, amountCents, categoryID, accountID, string(interval), nextDueDate.Format(dateLayout), boolToInt(active), id,
+		name, amountCents, categoryID, accountID, string(interval), nextDueDate.Format(dateLayout), boolToInt(active), remainingCount, id,
 	); err != nil {
 		return RecurringTemplate{}, err
 	}
@@ -172,11 +181,18 @@ func (s *Store) ProcessDueRecurringTemplates(asOf time.Time) (int, error) {
 	created := 0
 	for _, rt := range templates {
 		for !rt.NextDueDate.After(asOf) {
+			if rt.RemainingCount != nil && *rt.RemainingCount <= 0 {
+				break
+			}
 			if err := s.bookRecurringOccurrence(rt); err != nil {
 				return created, err
 			}
 			created++
 			rt.NextDueDate = rt.Advance()
+			if rt.RemainingCount != nil {
+				n := *rt.RemainingCount - 1
+				rt.RemainingCount = &n
+			}
 		}
 	}
 	return created, nil
@@ -197,9 +213,20 @@ func (s *Store) bookRecurringOccurrence(rt RecurringTemplate) error {
 		return err
 	}
 
+	// A limited template deactivates once its last booking is made.
 	nextDue := rt.Advance()
-	if _, err := tx.Exec(
-		`UPDATE recurring_templates SET next_due_date = ? WHERE id = ?`,
+	if rt.RemainingCount == nil {
+		if _, err := tx.Exec(
+			`UPDATE recurring_templates SET next_due_date = ? WHERE id = ?`,
+			nextDue.Format(dateLayout), rt.ID,
+		); err != nil {
+			return err
+		}
+	} else if _, err := tx.Exec(
+		`UPDATE recurring_templates
+		 SET next_due_date = ?, remaining_count = remaining_count - 1,
+		     active = CASE WHEN remaining_count - 1 <= 0 THEN 0 ELSE active END
+		 WHERE id = ?`,
 		nextDue.Format(dateLayout), rt.ID,
 	); err != nil {
 		return err

@@ -20,7 +20,10 @@ embedded — no external dependencies at runtime beyond the SQLite file.
 - **Recurring bookings** — templates (amount, category, account, interval)
   that book themselves automatically. A daily in-process scheduler (no
   external cron) catches up on any occurrences missed while the app was
-  offline.
+  offline. Templates can be limited to a number of installments (e.g. a
+  purchase on instalments or PayPal "Später zahlen": monthly rate × N); a
+  one-off payment on a fixed day is a template with a single installment.
+  The template deactivates itself after its last booking.
 - **Übersicht** — total balance, per-account tiles, and a combined,
   day-grouped transaction list.
 - **Monat** — income vs. expense for a given month, with a ratio bar and
@@ -78,7 +81,7 @@ API requests get a JSON `401`.
 | PUT/DELETE | `/api/categories/{id}` | Update / delete a category (409 if still referenced) |
 | GET/POST | `/api/transactions` | List (`?limit=`) / create transactions |
 | PUT/DELETE | `/api/transactions/{id}` | Update / delete a transaction |
-| GET/POST | `/api/recurring` | List / create recurring templates |
+| GET/POST | `/api/recurring` | List / create recurring templates (optional `remainingCount`, 1–600; `null` = unlimited) |
 | PUT/DELETE | `/api/recurring/{id}` | Update / delete a recurring template |
 | GET | `/healthz` | Liveness probe, no auth |
 
