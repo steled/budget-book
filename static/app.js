@@ -90,6 +90,7 @@
     return api('/api/overview').then(function (data) {
       renderBalance(data.totalBalanceCents);
       renderAccounts(data.accounts);
+      renderUpcoming(data.upcoming || []);
       renderTransactions(data.transactions);
     });
   }
@@ -148,6 +149,39 @@
       row.addEventListener('click', function () {
         if (tx) openTransactionDialog(tx);
       });
+    });
+  }
+
+  function renderUpcoming(items) {
+    var container = document.getElementById('upcoming-list');
+    container.hidden = items.length === 0;
+    if (items.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    var total = items.reduce(function (sum, t) {
+      return sum + (t.categoryType === 'income' ? t.amountCents : -t.amountCents);
+    }, 0);
+    container.innerHTML = '<div class="transaction-day-label">Ausstehend im ' +
+      esc(new Intl.DateTimeFormat('de-DE', { month: 'long' }).format(new Date())) +
+      ' (' + esc(formatCents(total)) + ')</div>' +
+      items.map(function (t) {
+        var isIncome = t.categoryType === 'income';
+        var parts = t.date.split('-');
+        return '<div class="transaction-row transaction-pending">' +
+          '<div class="transaction-icon">' + (isIncome ? '↓' : '↑') + '</div>' +
+          '<div class="transaction-details">' +
+          '<div class="transaction-title"><span>' + esc(t.description) + '</span>' +
+          '<span class="transaction-recurring-icon" title="Wiederkehrende Buchung">↻</span></div>' +
+          '<div class="transaction-meta">fällig am ' + esc(parts[2] + '.' + parts[1] + '.') + ' · ' +
+          esc(t.categoryName) + ' · ' + esc(t.accountName) + '</div>' +
+          '</div>' +
+          '<div class="transaction-amount ' + (isIncome ? 'amount-income' : 'amount-expense') + '">' +
+          (isIncome ? '+' : '−') + ' ' + formatCents(t.amountCents) + '</div>' +
+          '</div>';
+      }).join('');
+    container.querySelectorAll('.transaction-pending').forEach(function (row, i) {
+      row.querySelector('.transaction-icon').style.background = items[i].categoryColor;
     });
   }
 
@@ -368,7 +402,7 @@
     if (rt.remainingCount === 0) return 'abgeschlossen';
     if (rt.remainingCount === 1) return 'einmalig am ' + rt.nextDueDate;
     return label + ' · noch ' + rt.remainingCount + ' Raten (' +
-      formatCents(rt.amountCents * rt.remainingCount) + ' offen) · nächste ' + rt.nextDueDate;
+      formatCents(rt.outstandingCents) + ' offen) · nächste ' + rt.nextDueDate;
   }
 
   function loadRecurringSettings() {
@@ -388,6 +422,7 @@
           '<span class="transaction-meta recurring-meta">' + esc(category ? category.name : '') + ' · ' + esc(account ? account.name : '') +
           ' · ' + esc(recurringScheduleLabel(rt)) + '</span>' +
           '<label><input type="checkbox" class="recurring-active" ' + (rt.active ? 'checked' : '') + '> aktiv</label>' +
+          (rt.outstandingCents > 0 ? '<button type="button" class="btn btn-secondary recurring-extra">Extrazahlung</button>' : '') +
           '<button type="button" class="btn-icon recurring-edit" aria-label="Vorlage bearbeiten">✏️</button>' +
           '<button type="button" class="btn-icon settings-delete" aria-label="Vorlage löschen">🗑</button>' +
           '</li>';
@@ -411,6 +446,13 @@
               active: checkbox.checked,
             },
           }).catch(function (err) { alert(err.message); });
+        });
+      });
+
+      list.querySelectorAll('.recurring-extra').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.closest('li').dataset.id;
+          openExtraDialog(templates.find(function (t) { return String(t.id) === id; }));
         });
       });
 
@@ -459,6 +501,38 @@
     form.elements['nextDueDate'].value = rt.nextDueDate;
     setRecurringEditMode(rt);
     form.elements['name'].focus();
+  }
+
+  function openExtraDialog(rt) {
+    var form = document.getElementById('extra-form');
+    form.reset();
+    form.elements['id'].value = rt.id;
+    form.elements['amount'].max = (rt.outstandingCents / 100).toFixed(2);
+    form.elements['date'].value = dateStr(new Date());
+    document.getElementById('extra-info').textContent = rt.name + ': offen ' + formatCents(rt.outstandingCents);
+    document.getElementById('extra-error').hidden = true;
+    document.getElementById('extra-dialog').showModal();
+  }
+
+  function initExtraDialog() {
+    var dialog = document.getElementById('extra-dialog');
+    var form = document.getElementById('extra-form');
+    document.getElementById('extra-cancel').addEventListener('click', function () { dialog.close(); });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      api('/api/recurring/' + form.elements['id'].value + '/extra', {
+        method: 'POST',
+        body: { amount: form.elements['amount'].value, date: form.elements['date'].value },
+      }).then(function () {
+        dialog.close();
+        loadRecurringSettings();
+        loadOverview();
+      }).catch(function (err) {
+        var el = document.getElementById('extra-error');
+        el.textContent = err.message;
+        el.hidden = false;
+      });
+    });
   }
 
   function initSettingsForms() {
@@ -544,6 +618,7 @@
     initMonthNav();
     initTransactionDialog();
     initSettingsForms();
+    initExtraDialog();
     refreshReferenceData().then(loadOverview);
   });
 })();

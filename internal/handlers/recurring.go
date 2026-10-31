@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -21,19 +23,27 @@ type recurringTemplateDTO struct {
 	Active      bool   `json:"active"`
 	// RemainingCount is the number of bookings still to be made; null means unlimited.
 	RemainingCount *int `json:"remainingCount"`
+	// OutstandingCents is the open balance of a limited template after extra
+	// payments; null for unlimited templates.
+	OutstandingCents *int64 `json:"outstandingCents"`
 }
 
 func toRecurringTemplateDTO(rt database.RecurringTemplate) recurringTemplateDTO {
+	var outstanding *int64
+	if c, ok := rt.OutstandingCents(); ok {
+		outstanding = &c
+	}
 	return recurringTemplateDTO{
-		ID:             rt.ID,
-		Name:           rt.Name,
-		AmountCents:    rt.AmountCents,
-		CategoryID:     rt.CategoryID,
-		AccountID:      rt.AccountID,
-		Interval:       string(rt.Interval),
-		NextDueDate:    rt.NextDueDate.Format("2006-01-02"),
-		Active:         rt.Active,
-		RemainingCount: rt.RemainingCount,
+		OutstandingCents: outstanding,
+		ID:               rt.ID,
+		Name:             rt.Name,
+		AmountCents:      rt.AmountCents,
+		CategoryID:       rt.CategoryID,
+		AccountID:        rt.AccountID,
+		Interval:         string(rt.Interval),
+		NextDueDate:      rt.NextDueDate.Format("2006-01-02"),
+		Active:           rt.Active,
+		RemainingCount:   rt.RemainingCount,
 	}
 }
 
@@ -156,4 +166,56 @@ func (h *Handlers) DeleteRecurringTemplate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type extraPaymentRequest struct {
+	Amount string `json:"amount"`
+	Date   string `json:"date"`
+}
+
+// CreateExtraPayment books an extra payment on an installment template and
+// reduces its open balance.
+func (h *Handlers) CreateExtraPayment(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Ungültige ID.")
+		return
+	}
+	var req extraPaymentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Ungültige Anfrage.")
+		return
+	}
+	amountCents, err := parseAmountCents(req.Amount)
+	if err != nil || amountCents <= 0 {
+		writeError(w, http.StatusBadRequest, "Ungültiger Betrag.")
+		return
+	}
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Ungültiges Datum.")
+		return
+	}
+
+	if _, err := h.store.GetRecurringTemplate(id); errors.Is(err, sql.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "Vorlage nicht gefunden.")
+		return
+	}
+	if _, err := h.store.AddExtraPayment(id, amountCents, date); err != nil {
+		if errors.Is(err, database.ErrInvalidExtraPayment) {
+			writeError(w, http.StatusBadRequest, "Extrazahlung nur bei Ratenzahlung und höchstens in Höhe des offenen Betrags möglich.")
+			return
+		}
+		h.logger.Error("extra payment failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "Extrazahlung konnte nicht gebucht werden.")
+		return
+	}
+
+	updated, err := h.store.GetRecurringTemplate(id)
+	if err != nil {
+		h.logger.Error("get recurring template failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "Vorlage konnte nicht geladen werden.")
+		return
+	}
+	writeJSON(w, http.StatusCreated, toRecurringTemplateDTO(updated))
 }

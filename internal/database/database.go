@@ -107,6 +107,16 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	hasCredit, err := columnExists(db, "recurring_templates", "credit_cents")
+	if err != nil {
+		return fmt.Errorf("check credit_cents column: %w", err)
+	}
+	if !hasCredit {
+		if _, err := db.Exec(`ALTER TABLE recurring_templates ADD COLUMN credit_cents INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("add credit_cents column: %w", err)
+		}
+	}
+
 	if err := seedDefaultCategories(db); err != nil {
 		return fmt.Errorf("seed default categories: %w", err)
 	}
