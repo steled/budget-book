@@ -119,7 +119,7 @@ docker run -p 8080:8080 \
 
 ```bash
 helm install budget-book oci://ghcr.io/steled/charts/budget-book \
-  --version 0.3.1 \
+  --version 0.4.0 \
   --set auth.password='<your-password>' \
   --set auth.sessionSecret="$(openssl rand -hex 32)"
 ```
