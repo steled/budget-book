@@ -85,3 +85,44 @@ func TestRecurringTemplateRemainingCount(t *testing.T) {
 		}
 	}
 }
+
+func TestExtraPaymentEndpoint(t *testing.T) {
+	env := newTestEnv(t)
+	account, category := seedAccountAndCategory(t, env)
+	count := 4
+	rec := env.do(t, http.MethodPost, "/api/recurring", recurringTemplateRequest{
+		Name: "PayPal", Amount: "50.00", CategoryID: category.ID, AccountID: account.ID,
+		Interval: "monthly", NextDueDate: "2099-01-01", Active: true, RemainingCount: &count,
+	}, true)
+	created := decodeJSON[recurringTemplateDTO](t, rec)
+	if created.OutstandingCents == nil || *created.OutstandingCents != 20000 {
+		t.Fatalf("outstanding = %v", created.OutstandingCents)
+	}
+
+	path := "/api/recurring/" + itoa(created.ID) + "/extra"
+	if r := env.do(t, http.MethodPost, path, extraPaymentRequest{Amount: "70.00", Date: "2026-11-01"}, false); r.Code != http.StatusUnauthorized {
+		t.Errorf("unauthenticated status = %d", r.Code)
+	}
+	r := env.do(t, http.MethodPost, path, extraPaymentRequest{Amount: "70.00", Date: "2026-11-01"}, true)
+	if r.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", r.Code, r.Body.String())
+	}
+	got := decodeJSON[recurringTemplateDTO](t, r)
+	if *got.RemainingCount != 3 || *got.OutstandingCents != 13000 {
+		t.Errorf("after extra = %+v", got)
+	}
+
+	for name, req := range map[string]extraPaymentRequest{
+		"too high":   {Amount: "130.01", Date: "2026-11-01"},
+		"zero":       {Amount: "0", Date: "2026-11-01"},
+		"bad date":   {Amount: "10", Date: "x"},
+		"bad amount": {Amount: "abc", Date: "2026-11-01"},
+	} {
+		if r := env.do(t, http.MethodPost, path, req, true); r.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400", name, r.Code)
+		}
+	}
+	if r := env.do(t, http.MethodPost, "/api/recurring/9999/extra", extraPaymentRequest{Amount: "1", Date: "2026-11-01"}, true); r.Code != http.StatusNotFound {
+		t.Errorf("unknown id status = %d, want 404", r.Code)
+	}
+}

@@ -23,6 +23,11 @@ embedded — no external dependencies at runtime beyond the SQLite file.
   offline. Templates can be limited to a number of installments (e.g. a
   purchase on instalments or PayPal "Später zahlen": monthly rate × N); a
   one-off payment on a fixed day is a template with a single installment.
+  An **extra payment** on an installment plan books an additional transaction
+  and reduces the open balance: whole installments are dropped from the end
+  of the plan, a remainder reduces the final installment. Not-yet-booked
+  recurring bookings due later in the current month are shown on the
+  Übersicht as dashed, "pending" entries (not part of the balance).
   The template deactivates itself after its last booking.
 - **Übersicht** — total balance, per-account tiles, and a combined,
   day-grouped transaction list.
@@ -73,7 +78,7 @@ API requests get a JSON `401`.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/overview` | Total balance, account balances, combined transaction list |
+| GET | `/api/overview` | Total balance, account balances, combined transaction list, `upcoming` (unbooked recurring occurrences until end of month) |
 | GET | `/api/month?year=&month=` | Income/expense/balance for one calendar month (defaults to current) |
 | GET/POST | `/api/accounts` | List / create accounts |
 | PUT/DELETE | `/api/accounts/{id}` | Update / delete an account (409 if still referenced) |
@@ -82,6 +87,7 @@ API requests get a JSON `401`.
 | GET/POST | `/api/transactions` | List (`?limit=`) / create transactions |
 | PUT/DELETE | `/api/transactions/{id}` | Update / delete a transaction |
 | GET/POST | `/api/recurring` | List / create recurring templates (optional `remainingCount`, 1–600; `null` = unlimited) |
+| POST | `/api/recurring/{id}/extra` | Book an extra payment (`amount`, `date`) on an installment template; reduces `outstandingCents` (400 if not limited or above open balance) |
 | PUT/DELETE | `/api/recurring/{id}` | Update / delete a recurring template (editable in the settings UI) |
 | GET | `/healthz` | Liveness probe, no auth |
 

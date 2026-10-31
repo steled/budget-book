@@ -249,3 +249,89 @@ func TestMigrateAddsRemainingCountToExistingDatabase(t *testing.T) {
 		t.Errorf("columnExists = %v, %v, want true, nil", ok, err)
 	}
 }
+
+func TestAddExtraPaymentDropsWholeInstallmentsAndCreditsRemainder(t *testing.T) {
+	s := newTestStore(t)
+	account, _, expense := setupAccountAndCategories(t, s)
+	due := time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC)
+	count := 5
+	rt, err := s.CreateRecurringTemplate("PayPal", 10000, expense.ID, account.ID, IntervalMonthly, due, true, &count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.AddExtraPayment(rt.ID, 25000, due); err != nil {
+		t.Fatalf("AddExtraPayment() error = %v", err)
+	}
+	got, _ := s.GetRecurringTemplate(rt.ID)
+	if *got.RemainingCount != 3 || got.CreditCents != 5000 || !got.Active {
+		t.Fatalf("after extra = count %d credit %d active %v", *got.RemainingCount, got.CreditCents, got.Active)
+	}
+	if out, _ := got.OutstandingCents(); out != 25000 {
+		t.Errorf("outstanding = %d, want 25000", out)
+	}
+
+	// Catch up all three remaining installments: 100 + 100 + (100 - 50).
+	n, err := s.ProcessDueRecurringTemplates(time.Date(2027, 1, 20, 0, 0, 0, 0, time.UTC))
+	if err != nil || n != 3 {
+		t.Fatalf("Process = %d, %v", n, err)
+	}
+	txs, _ := s.ListTransactions(0)
+	var sum int64
+	for _, tx := range txs {
+		sum += tx.AmountCents
+	}
+	if sum != 50000 { // 250 extra + 100 + 100 + 50
+		t.Errorf("total paid = %d, want 50000", sum)
+	}
+	got, _ = s.GetRecurringTemplate(rt.ID)
+	if got.Active {
+		t.Error("template should be inactive after the last installment")
+	}
+}
+
+func TestAddExtraPaymentRejectsInvalid(t *testing.T) {
+	s := newTestStore(t)
+	account, _, expense := setupAccountAndCategories(t, s)
+	due := time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC)
+	count := 2
+	limited, _ := s.CreateRecurringTemplate("Rate", 10000, expense.ID, account.ID, IntervalMonthly, due, true, &count)
+	unlimited, _ := s.CreateRecurringTemplate("Miete", 10000, expense.ID, account.ID, IntervalMonthly, due, true, nil)
+
+	if _, err := s.AddExtraPayment(unlimited.ID, 100, due); err != ErrInvalidExtraPayment {
+		t.Errorf("unlimited: err = %v", err)
+	}
+	if _, err := s.AddExtraPayment(limited.ID, 20001, due); err != ErrInvalidExtraPayment {
+		t.Errorf("too high: err = %v", err)
+	}
+	// Paying off everything deactivates the template.
+	if _, err := s.AddExtraPayment(limited.ID, 20000, due); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetRecurringTemplate(limited.ID)
+	if got.Active || *got.RemainingCount != 0 {
+		t.Errorf("after payoff = %+v", got)
+	}
+}
+
+func TestListUpcomingRecurring(t *testing.T) {
+	s := newTestStore(t)
+	account, _, expense := setupAccountAndCategories(t, s)
+	count := 2
+	_, _ = s.CreateRecurringTemplate("Wöchentlich", 100, expense.ID, account.ID, IntervalWeekly, time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC), true, nil)
+	_, _ = s.CreateRecurringTemplate("Begrenzt", 200, expense.ID, account.ID, IntervalWeekly, time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), true, &count)
+	_, _ = s.CreateRecurringTemplate("Inaktiv", 300, expense.ID, account.ID, IntervalMonthly, time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC), false, nil)
+	_, _ = s.CreateRecurringTemplate("Nächster Monat", 400, expense.ID, account.ID, IntervalMonthly, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), true, nil)
+
+	got, err := s.ListUpcomingRecurring(time.Date(2026, 11, 30, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Begrenzt: 2 + 9; Wöchentlich: 10, 17, 24 → 5 entries.
+	if len(got) != 5 {
+		t.Fatalf("got %d occurrences, want 5: %+v", len(got), got)
+	}
+	if got[0].Template.Name != "Begrenzt" || got[1].Template.Name != "Begrenzt" || got[2].Template.Name != "Wöchentlich" {
+		t.Errorf("unexpected order: %v %v %v", got[0].Template.Name, got[1].Template.Name, got[2].Template.Name)
+	}
+}

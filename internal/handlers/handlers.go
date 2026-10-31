@@ -85,6 +85,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/recurring", h.auth.RequireAuth(h.CreateRecurringTemplate))
 	mux.HandleFunc("PUT /api/recurring/{id}", h.auth.RequireAuth(h.UpdateRecurringTemplate))
 	mux.HandleFunc("DELETE /api/recurring/{id}", h.auth.RequireAuth(h.DeleteRecurringTemplate))
+	mux.HandleFunc("POST /api/recurring/{id}/extra", h.auth.RequireAuth(h.CreateExtraPayment))
 }
 
 // Healthz reports liveness for the container HEALTHCHECK / orchestrator

@@ -16,6 +16,8 @@
 
   <div id="accounts-grid" class="accounts-grid" aria-label="Konten"></div>
 
+  <div id="upcoming-list" class="upcoming-list" aria-label="Anstehende Buchungen" hidden></div>
+
   <div id="transactions-list" class="transactions-list" aria-label="Buchungen"></div>
 </section>
 
@@ -121,6 +123,26 @@
       <button type="button" id="tx-delete" class="btn btn-danger" hidden>Löschen</button>
       <button type="button" id="tx-cancel" class="btn btn-secondary">Abbrechen</button>
       <button type="submit" class="btn btn-primary">Speichern</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="extra-dialog">
+  <form id="extra-form">
+    <h2>Extrazahlung</h2>
+    <p id="extra-info" class="extra-info"></p>
+    <input type="hidden" name="id">
+    <div class="form-group">
+      <label for="extra-amount">Betrag (€)</label>
+      <input type="number" id="extra-amount" name="amount" step="0.01" min="0.01" required>
+    </div>
+    <div class="form-group">
+      <label for="extra-date">Datum</label>
+      <input type="date" id="extra-date" name="date" required>
+    </div>
+    <p id="extra-error" class="error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" id="extra-cancel" class="btn btn-secondary">Abbrechen</button>
+      <button type="submit" class="btn btn-primary">Buchen</button>
     </div>
   </form>
 </dialog>

@@ -333,6 +333,30 @@ input:focus, select:focus {
 }
 .transaction-row:hover { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
 
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.transaction-pending {
+  cursor: default;
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+.transaction-pending:hover { background: transparent; }
+.transaction-pending .transaction-icon { opacity: 0.55; }
+.transaction-pending .transaction-title { font-style: italic; }
+
+.extra-info {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+}
+
+.settings-list .recurring-extra { min-height: 2.75rem; }
+
 .transaction-icon {
   flex-shrink: 0;
   width: 2.25rem;
